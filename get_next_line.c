@@ -1,0 +1,104 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: joluiz-d <joluiz-d@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2021/12/08 10:06:43 by joluiz-d          #+#    #+#             */
+/*   Updated: 2021/12/12 20:42:22 by joluiz-d         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "get_next_line.h"
+
+static ssize_t	has_a_line(char *static_buffer)
+{
+	ssize_t	i;
+
+	if (static_buffer)
+	{
+		i = 0;
+		while (static_buffer[i] != '\n' && static_buffer[i])
+			i++;
+		if (static_buffer[i] == '\n')
+			return (i);
+	}
+	return (-1);
+}
+
+static ssize_t	get_buffer(int fd, char **static_buffer)
+{
+	char	*buffer;
+	char	*tmp;
+	ssize_t	ret;
+
+	buffer = malloc((BUFFER_SIZE + 1) * sizeof(char *));
+	if (!buffer)
+		return (-1);
+	ret = read(fd, buffer, BUFFER_SIZE);
+	while (ret > 0)
+	{
+		buffer[ret] = '\0';
+		if (!*static_buffer)
+			*static_buffer = ft_strdup(buffer);
+		else
+		{
+			tmp = *static_buffer;
+			*static_buffer = ft_strjoin(tmp, buffer);
+			free(tmp);
+		}
+		if (has_a_line(*static_buffer) > 0)
+			break ;
+		ret = read(fd, buffer, BUFFER_SIZE);
+	}
+	free(buffer);
+	return (ret);
+}
+
+static void	get_line(char **static_buffer, char **line)
+{
+	ssize_t	i;
+	char	*tmp;
+
+	if (*static_buffer)
+	{
+		i = has_a_line(*static_buffer);
+		if (i >= 0)
+		{
+			tmp = *static_buffer;
+			*line = ft_substr(tmp, 0, i + 1);
+			*static_buffer = ft_substr(tmp, i + 1, ft_strlen(&tmp[i + 1]));
+			free(tmp);
+			if (ft_strlen(*static_buffer) == 0)
+			{
+				free(*static_buffer);
+				*static_buffer = NULL;
+			}
+		}
+		else
+		{
+			*line = ft_strdup(*static_buffer);
+			free(*static_buffer);
+			*static_buffer = NULL;
+		}
+	}
+}
+
+char	*get_next_line(int fd)
+{
+	static char	*static_buffer;
+	char		*line;
+
+	if (fd < 0 || BUFFER_SIZE < 1)
+		return (NULL);
+	line = NULL;
+	if (get_buffer(fd, &static_buffer) == -1)
+	{
+		if (static_buffer)
+			free(static_buffer);
+	}
+	else
+		get_line(&static_buffer, &line);
+	return (line);
+}
